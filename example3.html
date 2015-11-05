@@ -44,10 +44,25 @@ Copyright (c) 2013-2015  Egon Willighagen <egon.willighagen@maastrichtuniversity
       white-space: pre;
     }
   </style>
+
+  <script type="text/javascript">
+    var prmstr = window.location.search.substr(1);
+    var prmarr = prmstr.split ("&");
+    var params = {};
+
+    for ( var i = 0; i < prmarr.length; i++) {
+      var tmparr = prmarr[i].split("=");
+      params[tmparr[0]] = tmparr[1];
+    }
+
+    if (!params["pathway"]) {
+      params["pathway"] = "WP1560";
+    }
+  </script>		
 </head>
 
 <body>
-  <h3>Number nodes of a certain type in WP1560</h3>
+  <h3>Number nodes of a certain type in <spam id="pathway">WP1560</span></h3>
   <div class="chart"></div>
   <h4>JSON</h4>
   <div class="json" id="json1">Pending...</div>
@@ -65,7 +80,7 @@ select str(substr(str(?typeRes), 41)) as ?type count(distinct ?node) as ?nodeCou
       a wp:DataNode ;\
       dcterms:isPartOf ?pathway .\
     ?pathway a wp:Pathway .\
-    ?pathway dcterms:identifier \"WP1560\"^^xsd:string .\
+    ?pathway dcterms:identifier \"" + params["pathway"] + "\"^^xsd:string .\
     filter(str(?typeRes) != \"http://vocabularies.wikipathways.org/wp#DataNode\")\
 }\
 ";
@@ -99,6 +114,7 @@ select str(substr(str(?typeRes), 41)) as ?type count(distinct ?node) as ?nodeCou
         }
     });
     console.log("SPARQL initiated");
+    d3.select("#pathway").html(params["pathway"]);
 
 function showPopup(element) { 
   var path = element.selectedShape[0][0];
