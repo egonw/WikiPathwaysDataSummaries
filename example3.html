@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SPARQLing example</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<!--
+
+Copyright (c) 2013-2015  Egon Willighagen <egon.willighagen@maastrichtuniversity.nl>
+
+ Permission is hereby granted, free of charge, to any person
+ obtaining a copy of this software and associated documentation
+ files (the "Software"), to deal in the Software without
+ restriction, including without limitation the rights to use,
+ copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the
+ Software is furnished to do so, subject to the following
+ conditions:
+
+ The above copyright notice and this permission notice shall be
+ included in all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ OTHER DEALINGS IN THE SOFTWARE.
+
+-->
+
+  <!-- jQuery -->
+  <script src="lib/jquery-1.9.1.min.js"></script>
+
+  <!-- d3.js -->
+  <script type="text/javascript" src="lib/d3.v3.min.js"></script>
+  <script type="text/javascript" src="lib/dimple.v2.1.6.min.js"></script>
+
+  <style>
+    div {
+      font-family: "Courier New", monospace;
+      white-space: pre;
+    }
+  </style>
+</head>
+
+<body>
+  <h3>Number nodes of a certain type in WP1560</h3>
+  <div class="chart"></div>
+  <h4>JSON</h4>
+  <div class="json" id="json1">Pending...</div>
+
+  <!-- dynamically create a table with type information -->
+  <script type="text/javascript">
+    var url = "http://sparql.wikipathways.org/";
+    var query = "\
+PREFIX wp:      <http://vocabularies.wikipathways.org/wp#>\
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>\
+PREFIX dcterms: <http://purl.org/dc/terms/>\
+\
+select str(substr(str(?typeRes), 41)) as ?type count(distinct ?node) as ?nodeCount where {\
+    ?node a ?typeRes ;\
+      a wp:DataNode ;\
+      dcterms:isPartOf ?pathway .\
+    ?pathway a wp:Pathway .\
+    ?pathway dcterms:identifier \"WP1560\"^^xsd:string .\
+    filter(str(?typeRes) != \"http://vocabularies.wikipathways.org/wp#DataNode\")\
+}\
+";
+
+    var data = [];
+
+    var queryUrl = url+"?query="+ encodeURIComponent(query) +"&format=json";
+    console.log("Query URL: " + queryUrl);
+    $.ajax({
+        dataType: "jsonp",  
+        url: queryUrl,
+        success: function(response) {
+            console.log("SPARQL answer processing...");
+            var results = response.results.bindings;
+            d3.select("#json1").html(JSON.stringify(results, undefined, 2));
+            for ( var i in results ) {
+                var type = results[i].type.value;
+                var count = results[i].nodeCount.value;
+                data.push({name:type, value:count})
+            }
+            console.log("SPARQL done");
+            
+            var svg = dimple.newSvg(".chart", 590, 400);
+            var myChart = new dimple.chart(svg, data);
+            myChart.setBounds(20, 20, 460, 360)
+            myChart.addMeasureAxis("p", "value");
+            var ring = myChart.addSeries("name", dimple.plot.pie);
+            ring.innerRadius = "50%";
+            myChart.addLegend(500, 20, 90, 300, "left");
+            myChart.draw();
+        }
+    });
+    console.log("SPARQL initiated");
+
+function showPopup(element) { 
+  var path = element.selectedShape[0][0];
+  var d3path = d3.select(path);
+  var box = d3path.node().getBBox();
+
+  var cx = parseFloat(element.selectedShape.attr("x")),
+      cy = parseFloat(element.selectedShape.attr("y"));
+  var width = 150, height = 70,
+      x = box.x + width + 130, 
+      y = box.y + height + 160;
+  popup = svg.append("g");
+
+  popup.append("rect")
+    .attr("x",x).attr("y",y)
+    .attr("width", 100).attr("height", 20)
+    .attr("rx", 5).attr("ry", 5)
+    .attr("opacity", "0.8")
+    .style("fill", 'black')
+    .style("stroke", 'black')
+    .style("stroke-width", 2);
+
+  popup.append('text')
+    .attr('x', x + 5).attr('y', y + 15)
+    .text(e.name + ": " + e.value)
+    .style("font-size", 12)
+    .style("font-family", 'Arial')
+    .style("fill", 'white');
+}
+
+function removePopup(e) {
+  // Remove the popup
+  if (popup !== null) {
+    popup.remove();
+  }
+}
+  </script>
+</body>
+</html>
+
